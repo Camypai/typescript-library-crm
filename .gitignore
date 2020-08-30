@@ -1,0 +1,14 @@
+# Created by .ignore support plugin (hsz.mobi)
+.gitignore
+.idea/.gitignore
+.idea/jsLibraryMappings.xml
+.idea/library-typescript-artd.iml
+.idea/misc.xml
+.idea/modules.xml
+index.html
+itbs_contact_script.js
+node_modules/
+public/
+yarn-error.log
+yarn.lock
+/public/
