@@ -1,44 +1,11 @@
-import React, {ReactNode} from "react";
+import React from "react";
 import {Input, AutoComplete} from 'antd';
-import {OptionType, SelectProps} from 'antd/es/select';
+// import {OptionType, SelectProps} from 'antd/es/select';
 import ilookup from "./ilookup";
+import Api from './api'
 
-const {Option} = AutoComplete;
-
-const options: ilookup[] = [
-    {
-        id: '1',
-        entityName: 'entityName',
-        name: 'First'
-    },
-    {
-        id: '2',
-        entityName: 'entityName',
-        name: 'Second'
-    },
-    {
-        id: '3',
-        entityName: 'entityName',
-        name: 'Third'
-    },
-    {
-        id: '4',
-        entityName: 'entityName',
-        name: 'Fourth'
-    },
-    {
-        id: '5',
-        entityName: 'entityName',
-        name: 'Fifth'
-    }
-];
-
-const listContainsTagList = (lookup: ilookup, lookups?: ilookup[]) => {
-    if (!lookups || !lookups.length || lookups.length === 0) {
-        return false;
-    }
-    return lookups.some(compareLookup => compareLookup.id === lookup.id);
-};
+let api: Api;
+api = new Api();
 
 const filterSuggestedLookups = (filterText: string, lookups: ilookup[]): ilookup[] => {
     console.log("filterSuggestedLookups");
@@ -53,31 +20,70 @@ const filterSuggestedLookups = (filterText: string, lookups: ilookup[]): ilookup
 };
 
 interface Props {
-    id: string
+    id: string;
+    originalFieldName: string;
+
+    entityName: string;
+    selectFieldName: string;
+    filterNames: string[];
+    placeholder: string;
 }
 
 interface States {
     data: ilookup[];
     foundOptions: ilookup[];
     selectedOption: ilookup;
-    options: any,
+    options: any;
+    defaultValue: string;
+
+    entityName: string;
+    selectFieldName: string;
+    filterNames: string[];
+    placeholder: string;
 }
 
 export class LookupComponent extends React.Component<Props, States> {
     constructor(props: Props) {
         super(props);
 
+
+
         this.state = {
-            data: options,
+            data: [],
             foundOptions: [],
             selectedOption: null,
-            options: []
+            options: [],
+            defaultValue: this.getDefault(),
+
+            entityName: this.props.entityName,
+            selectFieldName: this.props.selectFieldName,
+            filterNames: this.props.filterNames,
+            placeholder: this.props.placeholder
         }
+
+
     }
 
+    getDefault = (): string => {
+        let result = '';
 
-    search = (value: string) => {
-        return filterSuggestedLookups(value, this.state.data).map(item => {
+        if(api.Xrm == undefined) {
+            throw new Error("XRM отсутствует");
+        }
+
+        const lookup = api.Xrm.Page.getAttribute(this.props.originalFieldName).getValue();
+        console.log("getDefault:");
+        console.dir(lookup);
+        if(lookup) {
+            result = lookup[0].name;
+        }
+
+        return result;
+    }
+
+    search = async (value: string) => {
+        const searchedItems = await api.FindEntities(value, this.state.entityName, this.state.selectFieldName, this.state.filterNames);
+        return filterSuggestedLookups(value, searchedItems).map(item => {
             return {
                 value: item.name,
                 label: (
@@ -99,8 +105,8 @@ export class LookupComponent extends React.Component<Props, States> {
     };
 
 
-    onSearch = (value: string) => {
-        const result = this.search(value);
+    onSearch = async (value: string) => {
+        const result = await this.search(value);
         this.setState({options: result})
 
         // const result = this.state.options;
@@ -114,12 +120,24 @@ export class LookupComponent extends React.Component<Props, States> {
         // console.dir(value);
         console.dir(option);
 
+        const lookup = option.children as ilookup;
+
         this.setState({selectedOption: option.children});
+        api.Xrm.Page.getAttribute(this.props.originalFieldName).setValue([{
+            id: lookup.id,
+            name: lookup.name,
+            entityType: lookup.entityName
+        }]);
     }
 
     onChange = (value) => {
         console.log("onChange:");
         console.dir(value);
+
+        if (value === '') {
+            this.setState({options: []});
+            api.Xrm.Page.getAttribute(this.props.originalFieldName).setValue();
+        }
     }
 
     render() {
@@ -130,11 +148,12 @@ export class LookupComponent extends React.Component<Props, States> {
                 onSelect={this.onSelect}
                 onChange={this.onChange}
                 options={this.state.options}
+                defaultValue={this.state.defaultValue}
                 // options={[{}]}
                 backfill
                 getPopupContainer={() => window.parent.document.getElementById(this.props.id)}
             >
-                <Input.Search size="middle" placeholder="Введите числительное" enterButton loading={false} allowClear/>
+                <Input.Search size="middle" placeholder={this.state.placeholder} enterButton loading={false} allowClear/>
             </AutoComplete>
         );
     }

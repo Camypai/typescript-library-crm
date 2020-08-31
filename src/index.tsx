@@ -11,9 +11,16 @@ export function ShowButton(id: string) {
     )
 }
 
-export function ShowLookupField(id: string) {
+export function ShowLookupField(id: string, originalFieldName: string, placeholder: string, entityName: string, selectFieldName: string, filterNames: string[]) {
     ReactDOM.render(
-        <LookupComponent id={id}/>,
+        <LookupComponent
+            id={id}
+            originalFieldName={originalFieldName}
+            placeholder={placeholder}
+            entityName={entityName}
+            filterNames={filterNames}
+            selectFieldName={selectFieldName}
+        />,
         window.parent.document.getElementById(id)
     )
 }
